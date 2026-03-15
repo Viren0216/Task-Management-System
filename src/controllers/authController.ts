@@ -1,23 +1,51 @@
 import { Request, Response } from 'express';
-
-// Skeleton controller methods
+import * as authService from '../services/authService';
 
 export const register = async (req: Request, res: Response) => {
-  res.status(201).json({ message: 'Register endpoint skeleton' });
+  const data = await authService.registerUser(req.body);
+  res.status(201).json({
+    status: 'success',
+    data,
+  });
 };
 
 export const login = async (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Login endpoint skeleton' });
+  const data = await authService.loginUser(req.body);
+  res.status(200).json({
+    status: 'success',
+    data,
+  });
 };
 
 export const refresh = async (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Refresh token endpoint skeleton' });
+  const data = await authService.refreshAuthTokens(req.body.refreshToken);
+  res.status(200).json({
+    status: 'success',
+    data,
+  });
 };
 
 export const logout = async (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Logout endpoint skeleton' });
+  // If we require auth for logout, we could pull refresh token from somewhere safe.
+  // Assuming the client passes the refresh token in the body specifically to invalidate it.
+  const { refreshToken } = req.body;
+  if (refreshToken) {
+    await authService.logoutUser(refreshToken);
+  }
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Logged out successfully',
+  });
 };
 
 export const changePassword = async (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Change password endpoint skeleton' });
+  // Assuming auth middleware populated req.user
+  const userId = (req as any).user.userId;
+  await authService.changeUserPassword(userId, req.body);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Password updated successfully',
+  });
 };

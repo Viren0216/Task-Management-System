@@ -1,12 +1,20 @@
-// Skeleton User Repository implementation
-import { logger } from '../utils/logger';
+import prisma from '../config/prisma';
 
 export const findUserByEmail = async (email: string) => {
-  logger.info('Skeleton: Repository findUserByEmail called');
-  return null;
+  return prisma.user.findUnique({ where: { email } });
+};
+
+export const findUserById = async (id: string) => {
+  return prisma.user.findUnique({ where: { id } });
 };
 
 export const createUser = async (data: any) => {
-  logger.info('Skeleton: Repository createUser called');
-  return { id: 'dummy-id', ...data };
+  return prisma.user.create({ data });
+};
+
+export const updatePassword = async (id: string, passwordHash: string) => {
+  return prisma.user.update({
+    where: { id },
+    data: { passwordHash },
+  });
 };
