@@ -31,8 +31,10 @@ export const registerUser = async (data: any) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
+  const hashedRefreshToken = await hashPassword(refreshToken);
+
   await tokenRepository.createRefreshToken({
-    token: refreshToken,
+    token: hashedRefreshToken,
     userId: user.id,
     expiresAt,
   });
@@ -61,8 +63,10 @@ export const loginUser = async (data: any) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
+  const hashedRefreshToken = await hashPassword(refreshToken);
+
   await tokenRepository.createRefreshToken({
-    token: refreshToken,
+    token: hashedRefreshToken,
     userId: user.id,
     expiresAt,
   });
@@ -75,25 +79,35 @@ export const loginUser = async (data: any) => {
 export const refreshAuthTokens = async (token: string) => {
   try {
     const decoded = verifyRefreshToken(token);
-    const savedToken = await tokenRepository.findRefreshToken(token);
+    const savedTokens = await tokenRepository.findRefreshTokensByUserId(decoded.userId);
 
-    if (!savedToken) {
+    let matchingToken = null;
+    for (const st of savedTokens) {
+      if (await comparePassword(token, st.token)) {
+        matchingToken = st;
+        break;
+      }
+    }
+
+    if (!matchingToken) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
     // Optional: invalidate old refresh token via token rotation (delete old and issue new)
-    await tokenRepository.deleteRefreshToken(token);
+    await tokenRepository.deleteRefreshTokenById(matchingToken.id);
 
-    const payload = { userId: savedToken.user.id, role: savedToken.user.role };
+    const payload = { userId: matchingToken.user.id, role: matchingToken.user.role };
     const accessToken = generateAccessToken(payload);
     const newRefreshToken = generateRefreshToken(payload);
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    const hashedNewRefreshToken = await hashPassword(newRefreshToken);
+
     await tokenRepository.createRefreshToken({
-      token: newRefreshToken,
-      userId: savedToken.userId,
+      token: hashedNewRefreshToken,
+      userId: matchingToken.userId,
       expiresAt,
     });
 
@@ -104,7 +118,19 @@ export const refreshAuthTokens = async (token: string) => {
 };
 
 export const logoutUser = async (token: string) => {
-  await tokenRepository.deleteRefreshToken(token);
+  try {
+    const decoded = verifyRefreshToken(token);
+    const savedTokens = await tokenRepository.findRefreshTokensByUserId(decoded.userId);
+    
+    for (const st of savedTokens) {
+      if (await comparePassword(token, st.token)) {
+        await tokenRepository.deleteRefreshTokenById(st.id);
+        break;
+      }
+    }
+  } catch (error) {
+    // If the token is already expired or invalid, we can safely ignore the logout error
+  }
 };
 
 export const changeUserPassword = async (userId: string, data: any) => {

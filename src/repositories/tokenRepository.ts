@@ -4,14 +4,15 @@ export const createRefreshToken = async (data: { token: string; userId: string; 
   return prisma.refreshToken.create({ data });
 };
 
-export const findRefreshToken = async (token: string) => {
-  return prisma.refreshToken.findUnique({ where: { token }, include: { user: true } });
+export const findRefreshTokensByUserId = async (userId: string) => {
+  return prisma.refreshToken.findMany({ where: { userId }, include: { user: true } });
 };
 
-export const deleteRefreshToken = async (token: string) => {
-  return prisma.refreshToken.delete({ where: { token } });
+export const deleteRefreshTokenById = async (id: string) => {
+  return prisma.refreshToken.delete({ where: { id } });
 };
 
 export const deleteRefreshTokensForUser = async (userId: string) => {
   return prisma.refreshToken.deleteMany({ where: { userId } });
 };
+
