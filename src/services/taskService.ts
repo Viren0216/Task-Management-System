@@ -36,10 +36,10 @@ export const createTask = async (projectId: string, creatorId: string, data: any
   return task;
 };
 
-export const getProjectTasks = async (projectId: string, userId: string) => {
+export const getProjectTasks = async (projectId: string, userId: string, page: number = 1, limit: number = 20) => {
   // Any member (including VIEWER) can list tasks
   await verifyProjectRole(projectId, userId);
-  return taskRepository.findProjectTasks(projectId);
+  return taskRepository.findProjectTasks(projectId, page, limit);
 };
 
 export const getTaskDetails = async (projectId: string, taskId: string, userId: string) => {

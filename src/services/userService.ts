@@ -18,6 +18,8 @@ export const updateUserProfile = async (userId: string, data: any) => {
     throw new NotFoundError('User not found');
   }
 
-  const updatedUser = await userRepository.updateUserProfile(userId, data);
+  // Only allow safe fields to be updated — never passwordHash, email, etc.
+  const { name, avatar, bio, phone } = data;
+  const updatedUser = await userRepository.updateUserProfile(userId, { name, avatar, bio, phone });
   return updatedUser;
 };

@@ -9,8 +9,11 @@ export const createTask = async (req: Request, res: Response) => {
 
 export const listTasks = async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
-  const tasks = await taskService.getProjectTasks(req.params.projectId, userId);
-  res.status(200).json({ status: 'success', data: tasks });
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+  const result = await taskService.getProjectTasks(req.params.projectId, userId, page, limit);
+  res.status(200).json({ status: 'success', data: result });
 };
 
 export const getTask = async (req: Request, res: Response) => {

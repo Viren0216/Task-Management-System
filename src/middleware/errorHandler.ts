@@ -13,7 +13,7 @@ export const errorHandler = (
 ) => {
   // 1. If we threw a typed CustomError (validation, unauth, etc.), properly format it!
   if (err instanceof CustomError) {
-    return res.status(err.statusCode).json({ errors: err.serializeErrors() });
+    return res.status(err.statusCode).json({ status: 'error', errors: err.serializeErrors() });
   }
 
   // 2. Logging unexpected framework / database crash logs
@@ -22,6 +22,7 @@ export const errorHandler = (
 
   // 3. Graceful fallback for the external client so we don't leak core server stacks
   res.status(500).json({
+    status: 'error',
     errors: [{ message: 'Something went incredibly wrong on the server.' }],
   });
 };

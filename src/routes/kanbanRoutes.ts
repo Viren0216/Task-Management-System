@@ -6,8 +6,6 @@ import { updateTaskStatusSchema } from '../validators/taskValidator';
 
 const router = Router({ mergeParams: true }); // mergeParams to read :projectId from parent
 
-router.use(requireAuth);
-
 // GET  /api/v1/projects/:projectId/kanban  → grouped board view
 router.get('/', kanbanController.getKanbanBoard);
 

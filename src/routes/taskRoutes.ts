@@ -12,8 +12,6 @@ import commentRoutes from './commentRoutes';
 
 const router = Router({ mergeParams: true }); // mergeParams needed to read :projectId from parent
 
-router.use(requireAuth);
-
 // Mount comment routes under /:taskId/comments
 router.use('/:taskId/comments', commentRoutes);
 

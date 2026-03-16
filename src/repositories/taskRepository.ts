@@ -15,22 +15,31 @@ export const createTask = async (data: Prisma.TaskUncheckedCreateInput) => {
   });
 };
 
-export const findProjectTasks = async (projectId: string) => {
-  return prisma.task.findMany({
-    where: { projectId },
-    include: {
-      assignee: {
-        select: { id: true, name: true, email: true, avatar: true },
+export const findProjectTasks = async (projectId: string, page: number, limit: number) => {
+  const skip = (page - 1) * limit;
+
+  const [tasks, total] = await Promise.all([
+    prisma.task.findMany({
+      where: { projectId },
+      include: {
+        assignee: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+        createdBy: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
       },
-      createdBy: {
-        select: { id: true, name: true, email: true, avatar: true },
-      },
-    },
-    orderBy: [
-      { status: 'asc' },
-      { createdAt: 'desc' },
-    ],
-  });
+      orderBy: [
+        { status: 'asc' },
+        { createdAt: 'desc' },
+      ],
+      skip,
+      take: limit,
+    }),
+    prisma.task.count({ where: { projectId } }),
+  ]);
+
+  return { tasks, total, page, limit };
 };
 
 export const findTaskById = async (taskId: string, projectId: string) => {
