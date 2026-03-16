@@ -8,10 +8,14 @@ import {
   assignTaskSchema,
 } from '../validators/taskValidator';
 import * as activityLogController from '../controllers/activityLogController';
+import commentRoutes from './commentRoutes';
 
 const router = Router({ mergeParams: true }); // mergeParams needed to read :projectId from parent
 
 router.use(requireAuth);
+
+// Mount comment routes under /:taskId/comments
+router.use('/:taskId/comments', commentRoutes);
 
 router.post('/', validateRequest(createTaskSchema), taskController.createTask);
 router.get('/', taskController.listTasks);

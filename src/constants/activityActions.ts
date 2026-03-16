@@ -10,6 +10,9 @@ export const ActivityAction = {
   TASK_DELETED:        'TASK_DELETED',
   TASK_ASSIGNED:       'TASK_ASSIGNED',
   TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  COMMENT_CREATED:     'COMMENT_CREATED',
+  COMMENT_UPDATED:     'COMMENT_UPDATED',
+  COMMENT_DELETED:     'COMMENT_DELETED',
 } as const;
 
 export type ActivityActionType = (typeof ActivityAction)[keyof typeof ActivityAction];

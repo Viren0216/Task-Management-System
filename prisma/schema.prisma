@@ -31,6 +31,7 @@ model User {
   assignedTasks   Task[]          @relation("TaskAssignee")
   createdTasks    Task[]          @relation("TaskCreator")
   activityLogs    ActivityLog[]   @relation("ActivityLogUser")
+  comments        Comment[]       @relation("CommentAuthor")
 }
 
 model RefreshToken {
@@ -103,10 +104,25 @@ model Task {
   assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy    User          @relation("TaskCreator", fields: [createdById], references: [id])
   activityLogs ActivityLog[] @relation("ActivityLogTask")
+  comments     Comment[]     @relation("TaskComments")
 
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation("TaskComments", fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("CommentAuthor", fields: [userId], references: [id])
+
+  @@index([taskId, createdAt])
 }
 
 model ActivityLog {
