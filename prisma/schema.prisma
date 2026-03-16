@@ -28,6 +28,8 @@ model User {
   updatedProjects Project[]       @relation("ProjectUpdater")
   projectMembers  ProjectMember[] @relation("ProjectMemberUser")
   invitedMembers  ProjectMember[] @relation("ProjectMemberInviter")
+  assignedTasks   Task[]          @relation("TaskAssignee")
+  createdTasks    Task[]          @relation("TaskCreator")
 }
 
 model RefreshToken {
@@ -51,6 +53,7 @@ model Project {
   owner     User            @relation("ProjectOwner", fields: [ownerId], references: [id])
   updatedBy User?           @relation("ProjectUpdater", fields: [updatedById], references: [id])
   members   ProjectMember[]
+  tasks     Task[]          @relation("ProjectTasks")
 
   @@unique([ownerId, name])
   @@index([ownerId])
@@ -79,4 +82,40 @@ enum ProjectRole {
   ADMIN
   MEMBER
   VIEWER
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  projectId   String
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  assigneeId  String?
+  createdById String
+  dueDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  project   Project @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: Cascade)
+  assignee  User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy User    @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

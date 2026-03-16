@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as projectController from '../controllers/projectController';
 import { requireAuth } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validate';
+import taskRoutes from './taskRoutes';
+import kanbanRoutes from './kanbanRoutes';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -13,6 +15,12 @@ const router = Router();
 
 // Apply auth middleware to all project routes
 router.use(requireAuth);
+
+// Mount task routes explicitly nested under projects
+router.use('/:projectId/tasks', taskRoutes);
+
+// Mount kanban board routes
+router.use('/:projectId/kanban', kanbanRoutes);
 
 // Project Management
 router.post('/', validateRequest(createProjectSchema), projectController.createProject);
