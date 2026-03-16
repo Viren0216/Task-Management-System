@@ -8,7 +8,7 @@ export const getUserProfile = async (userId: string) => {
   }
 
   // Exclude sensitive data
-  const { passwordHash, role, updatedAt, ...safeUser } = user;
+  const { passwordHash, updatedAt, ...safeUser } = user;
   return safeUser;
 };
 

@@ -3,7 +3,6 @@ import { config } from '../config';
 
 export interface TokenPayload {
   userId: string;
-  role: string;
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {

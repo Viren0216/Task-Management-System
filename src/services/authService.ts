@@ -23,7 +23,7 @@ export const registerUser = async (data: any) => {
     avatar: data.avatar,
   });
 
-  const payload = { userId: user.id, role: user.role };
+  const payload = { userId: user.id };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
@@ -56,7 +56,7 @@ export const loginUser = async (data: any) => {
     throw new UnauthorizedError('Invalid credentials');
   }
 
-  const payload = { userId: user.id, role: user.role };
+  const payload = { userId: user.id };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
@@ -96,7 +96,7 @@ export const refreshAuthTokens = async (token: string) => {
     // Optional: invalidate old refresh token via token rotation (delete old and issue new)
     await tokenRepository.deleteRefreshTokenById(matchingToken.id);
 
-    const payload = { userId: matchingToken.user.id, role: matchingToken.user.role };
+    const payload = { userId: matchingToken.user.id };
     const accessToken = generateAccessToken(payload);
     const newRefreshToken = generateRefreshToken(payload);
 

@@ -20,23 +20,62 @@ model User {
   avatar       String?
   bio          String?
   phone        String?
-  role         Role     @default(MEMBER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  refreshTokens RefreshToken[]
+  refreshTokens   RefreshToken[]
+  ownedProjects   Project[]       @relation("ProjectOwner")
+  updatedProjects Project[]       @relation("ProjectUpdater")
+  projectMembers  ProjectMember[] @relation("ProjectMemberUser")
+  invitedMembers  ProjectMember[] @relation("ProjectMemberInviter")
 }
 
 model RefreshToken {
   id        String   @id @default(uuid())
-  token     String   @unique
+  token     String   @db.Text
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
 
-enum Role {
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner     User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  updatedBy User?           @relation("ProjectUpdater", fields: [updatedById], references: [id])
+  members   ProjectMember[]
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
+}
+
+model ProjectMember {
+  id          String      @id @default(uuid())
+  projectId   String
+  userId      String
+  role        ProjectRole @default(MEMBER)
+  invitedById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation("ProjectMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User?   @relation("ProjectMemberInviter", fields: [invitedById], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+  @@index([projectId, role])
+}
+
+enum ProjectRole {
   ADMIN
   MEMBER
   VIEWER
