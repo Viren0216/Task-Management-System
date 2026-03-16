@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validate';
 import taskRoutes from './taskRoutes';
 import kanbanRoutes from './kanbanRoutes';
+import activityLogRoutes from './activityLogRoutes';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -21,6 +22,9 @@ router.use('/:projectId/tasks', taskRoutes);
 
 // Mount kanban board routes
 router.use('/:projectId/kanban', kanbanRoutes);
+
+// Mount activity log routes
+router.use('/:projectId/activity', activityLogRoutes);
 
 // Project Management
 router.post('/', validateRequest(createProjectSchema), projectController.createProject);

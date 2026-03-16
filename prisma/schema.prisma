@@ -30,6 +30,7 @@ model User {
   invitedMembers  ProjectMember[] @relation("ProjectMemberInviter")
   assignedTasks   Task[]          @relation("TaskAssignee")
   createdTasks    Task[]          @relation("TaskCreator")
+  activityLogs    ActivityLog[]   @relation("ActivityLogUser")
 }
 
 model RefreshToken {
@@ -50,10 +51,11 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner     User            @relation("ProjectOwner", fields: [ownerId], references: [id])
-  updatedBy User?           @relation("ProjectUpdater", fields: [updatedById], references: [id])
-  members   ProjectMember[]
-  tasks     Task[]          @relation("ProjectTasks")
+  owner        User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  updatedBy    User?           @relation("ProjectUpdater", fields: [updatedById], references: [id])
+  members      ProjectMember[]
+  tasks        Task[]          @relation("ProjectTasks")
+  activityLogs ActivityLog[]   @relation("ActivityLogProject")
 
   @@unique([ownerId, name])
   @@index([ownerId])
@@ -97,13 +99,35 @@ model Task {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  project   Project @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: Cascade)
-  assignee  User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy User    @relation("TaskCreator", fields: [createdById], references: [id])
+  project      Project       @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: Cascade)
+  assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy    User          @relation("TaskCreator", fields: [createdById], references: [id])
+  activityLogs ActivityLog[] @relation("ActivityLogTask")
 
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String?
+  taskId    String?
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user    User     @relation("ActivityLogUser", fields: [userId], references: [id])
+  project Project? @relation("ActivityLogProject", fields: [projectId], references: [id], onDelete: Cascade)
+  task    Task?    @relation("ActivityLogTask", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([action])
+  @@index([projectId, createdAt])
+  @@index([taskId, createdAt])
 }
 
 enum TaskStatus {

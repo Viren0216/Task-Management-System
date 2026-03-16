@@ -1,9 +1,11 @@
 import * as projectRepository from '../repositories/projectRepository';
 import * as projectMemberRepository from '../repositories/projectMemberRepository';
 import * as userRepository from '../repositories/userRepository';
+import * as activityLogService from './activityLogService';
 import { NotFoundError } from '../errors/NotFoundError';
 import { ForbiddenError } from '../errors/ForbiddenError';
 import { ConflictError } from '../errors/ConflictError';
+import { ActivityAction } from '../constants/activityActions';
 import { ProjectRole } from '@prisma/client';
 import prisma from '../config/prisma';
 
@@ -23,7 +25,7 @@ export const verifyProjectRole = async (projectId: string, userId: string, allow
 
 export const createProject = async (data: { name: string; description?: string }, ownerId: string) => {
   // Use transaction to ensure both project and admin member are created reliably
-  return prisma.$transaction(async (tx) => {
+  const project = await prisma.$transaction(async (tx) => {
     // Check for duplicate name for the same owner
     const existingProject = await tx.project.findUnique({
       where: {
@@ -35,7 +37,7 @@ export const createProject = async (data: { name: string; description?: string }
       throw new ConflictError('You already have a project with this name');
     }
 
-    const project = await tx.project.create({
+    const newProject = await tx.project.create({
       data: {
         name: data.name,
         description: data.description,
@@ -45,14 +47,24 @@ export const createProject = async (data: { name: string; description?: string }
 
     await tx.projectMember.create({
       data: {
-        projectId: project.id,
+        projectId: newProject.id,
         userId: ownerId,
         role: ProjectRole.ADMIN,
       },
     });
 
-    return project;
+    return newProject;
   });
+
+  // Fire-and-forget activity log
+  activityLogService.log({
+    userId: ownerId,
+    projectId: project.id,
+    action: ActivityAction.PROJECT_CREATED,
+    metadata: { projectName: project.name },
+  }).catch(() => {});
+
+  return project;
 };
 
 export const getUserProjects = async (userId: string) => {
@@ -68,15 +80,33 @@ export const updateProject = async (projectId: string, userId: string, data: any
   await verifyProjectRole(projectId, userId, [ProjectRole.ADMIN]);
   
   // Update the project, marking the updater
-  return projectRepository.updateProject(projectId, {
+  const updated = await projectRepository.updateProject(projectId, {
     ...data,
     updatedById: userId,
   });
+
+  activityLogService.log({
+    userId,
+    projectId,
+    action: ActivityAction.PROJECT_UPDATED,
+    metadata: { updatedFields: Object.keys(data) },
+  }).catch(() => {});
+
+  return updated;
 };
 
 export const deleteProject = async (projectId: string, userId: string) => {
   await verifyProjectRole(projectId, userId, [ProjectRole.ADMIN]);
-  return projectRepository.deleteProject(projectId);
+
+  // Grab name before deleting for the log metadata
+  const project = await projectRepository.findProjectById(projectId);
+  await projectRepository.deleteProject(projectId);
+
+  activityLogService.log({
+    userId,
+    action: ActivityAction.PROJECT_DELETED,
+    metadata: { projectName: project?.name, projectId },
+  }).catch(() => {});
 };
 
 export const getProjectMembers = async (projectId: string, userId: string) => {
@@ -102,12 +132,21 @@ export const inviteMember = async (projectId: string, requesterId: string, email
     throw new ConflictError('User is already a member of this project');
   }
 
-  return projectMemberRepository.addMember({
+  const member = await projectMemberRepository.addMember({
     projectId,
     userId: targetUser.id,
     role,
     invitedById: requesterId,
   });
+
+  activityLogService.log({
+    userId: requesterId,
+    projectId,
+    action: ActivityAction.MEMBER_INVITED,
+    metadata: { invitedEmail: email, invitedUserId: targetUser.id, role },
+  }).catch(() => {});
+
+  return member;
 };
 
 export const updateMemberRole = async (projectId: string, requesterId: string, targetUserId: string, newRole: ProjectRole) => {
@@ -126,7 +165,16 @@ export const updateMemberRole = async (projectId: string, requesterId: string, t
     }
   }
 
-  return projectMemberRepository.updateMemberRole(projectId, targetUserId, newRole);
+  const updated = await projectMemberRepository.updateMemberRole(projectId, targetUserId, newRole);
+
+  activityLogService.log({
+    userId: requesterId,
+    projectId,
+    action: ActivityAction.MEMBER_ROLE_CHANGED,
+    metadata: { targetUserId, oldRole: existingMember.role, newRole },
+  }).catch(() => {});
+
+  return updated;
 };
 
 export const removeMember = async (projectId: string, requesterId: string, targetUserId: string) => {
@@ -144,5 +192,12 @@ export const removeMember = async (projectId: string, requesterId: string, targe
     }
   }
 
-  return projectMemberRepository.removeMember(projectId, targetUserId);
+  await projectMemberRepository.removeMember(projectId, targetUserId);
+
+  activityLogService.log({
+    userId: requesterId,
+    projectId,
+    action: ActivityAction.MEMBER_REMOVED,
+    metadata: { removedUserId: targetUserId },
+  }).catch(() => {});
 };

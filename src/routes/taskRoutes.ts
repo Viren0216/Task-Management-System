@@ -7,6 +7,7 @@ import {
   updateTaskSchema,
   assignTaskSchema,
 } from '../validators/taskValidator';
+import * as activityLogController from '../controllers/activityLogController';
 
 const router = Router({ mergeParams: true }); // mergeParams needed to read :projectId from parent
 
@@ -18,5 +19,6 @@ router.get('/:taskId', taskController.getTask);
 router.patch('/:taskId', validateRequest(updateTaskSchema), taskController.updateTask);
 router.delete('/:taskId', taskController.deleteTask);
 router.patch('/:taskId/assign', validateRequest(assignTaskSchema), taskController.assignTask);
+router.get('/:taskId/activity', activityLogController.getTaskActivity);
 
 export default router;

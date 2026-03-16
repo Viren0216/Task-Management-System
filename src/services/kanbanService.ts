@@ -1,6 +1,8 @@
 import * as taskRepository from '../repositories/taskRepository';
+import * as activityLogService from './activityLogService';
 import { verifyProjectRole } from './projectService';
 import { NotFoundError } from '../errors/NotFoundError';
+import { ActivityAction } from '../constants/activityActions';
 import { ProjectRole, TaskStatus } from '@prisma/client';
 
 export const getKanbanBoard = async (projectId: string, userId: string) => {
@@ -24,5 +26,15 @@ export const updateTaskStatus = async (
     throw new NotFoundError('Task not found in this project');
   }
 
-  return taskRepository.updateTaskStatus(taskId, projectId, status);
+  const updated = await taskRepository.updateTaskStatus(taskId, projectId, status);
+
+  activityLogService.log({
+    userId,
+    projectId,
+    taskId,
+    action: ActivityAction.TASK_STATUS_CHANGED,
+    metadata: { oldStatus: task.status, newStatus: status },
+  }).catch(() => {});
+
+  return updated;
 };

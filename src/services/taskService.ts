@@ -1,8 +1,10 @@
 import * as taskRepository from '../repositories/taskRepository';
 import * as projectMemberRepository from '../repositories/projectMemberRepository';
+import * as activityLogService from './activityLogService';
 import { verifyProjectRole } from './projectService';
 import { NotFoundError } from '../errors/NotFoundError';
 import { ConflictError } from '../errors/ConflictError';
+import { ActivityAction } from '../constants/activityActions';
 import { ProjectRole } from '@prisma/client';
 
 export const createTask = async (projectId: string, creatorId: string, data: any) => {
@@ -17,11 +19,21 @@ export const createTask = async (projectId: string, creatorId: string, data: any
     }
   }
 
-  return taskRepository.createTask({
+  const task = await taskRepository.createTask({
     ...data,
     projectId,
     createdById: creatorId,
   });
+
+  activityLogService.log({
+    userId: creatorId,
+    projectId,
+    taskId: task.id,
+    action: ActivityAction.TASK_CREATED,
+    metadata: { title: task.title },
+  }).catch(() => {});
+
+  return task;
 };
 
 export const getProjectTasks = async (projectId: string, userId: string) => {
@@ -50,7 +62,17 @@ export const updateTask = async (projectId: string, taskId: string, userId: stri
     throw new NotFoundError('Task not found');
   }
 
-  return taskRepository.updateTask(taskId, projectId, data);
+  const updated = await taskRepository.updateTask(taskId, projectId, data);
+
+  activityLogService.log({
+    userId,
+    projectId,
+    taskId,
+    action: ActivityAction.TASK_UPDATED,
+    metadata: { updatedFields: Object.keys(data) },
+  }).catch(() => {});
+
+  return updated;
 };
 
 export const deleteTask = async (projectId: string, taskId: string, userId: string) => {
@@ -62,7 +84,15 @@ export const deleteTask = async (projectId: string, taskId: string, userId: stri
     throw new NotFoundError('Task not found');
   }
 
-  return taskRepository.deleteTask(taskId, projectId);
+  await taskRepository.deleteTask(taskId, projectId);
+
+  activityLogService.log({
+    userId,
+    projectId,
+    taskId,
+    action: ActivityAction.TASK_DELETED,
+    metadata: { title: existingTask.title },
+  }).catch(() => {});
 };
 
 export const assignTask = async (projectId: string, taskId: string, userId: string, assigneeId: string | null) => {
@@ -82,5 +112,15 @@ export const assignTask = async (projectId: string, taskId: string, userId: stri
     }
   }
 
-  return taskRepository.assignTask(taskId, projectId, assigneeId);
+  const result = await taskRepository.assignTask(taskId, projectId, assigneeId);
+
+  activityLogService.log({
+    userId,
+    projectId,
+    taskId,
+    action: ActivityAction.TASK_ASSIGNED,
+    metadata: { assigneeId, previousAssigneeId: existingTask.assigneeId },
+  }).catch(() => {});
+
+  return result;
 };
