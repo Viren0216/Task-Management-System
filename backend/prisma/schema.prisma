@@ -100,6 +100,9 @@ model Task {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  // Ordering of tasks within a given status column on the Kanban board
+  position    Int          @default(0)
+
   project      Project       @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: Cascade)
   assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy    User          @relation("TaskCreator", fields: [createdById], references: [id])
@@ -109,6 +112,7 @@ model Task {
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
+  @@index([projectId, status, position])
 }
 
 model Comment {
