@@ -103,11 +103,43 @@ const taskInclude = {
   },
 };
 
-export const findTasksByProjectGroupedByStatus = async (projectId: string) => {
+export type KanbanFilters = {
+  status?: TaskStatus;
+  assigneeId?: string;
+  priority?: TaskPriority;
+  search?: string;
+};
+
+export const findTasksByProjectGroupedByStatus = async (
+  projectId: string,
+  filters: KanbanFilters = {}
+) => {
+  const { status, assigneeId, priority, search } = filters;
+
+  const where: Prisma.TaskWhereInput = {
+    projectId,
+    status,
+    assigneeId,
+    priority,
+    ...(search
+      ? {
+          OR: [
+            // Note: MySQL StringFilter doesn't support `mode: 'insensitive'`
+            { title: { contains: search } },
+            { description: { contains: search } },
+          ],
+        }
+      : {}),
+  };
+
   const tasks = await prisma.task.findMany({
-    where: { projectId },
+    where,
     include: taskInclude,
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      { status: 'asc' },
+      { position: 'asc' },
+      { createdAt: 'desc' },
+    ],
   });
 
   return {
@@ -123,6 +155,112 @@ export const updateTaskStatus = async (taskId: string, projectId: string, status
     where: { id: taskId, projectId },
     data: { status },
     include: taskInclude,
+  });
+};
+
+export type MoveTaskInput = {
+  projectId: string;
+  taskId: string;
+  toStatus: TaskStatus;
+  toIndex: number;
+};
+
+export const moveTaskWithReorder = async ({
+  projectId,
+  taskId,
+  toStatus,
+  toIndex,
+}: MoveTaskInput) => {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id: taskId, projectId },
+      select: { id: true, status: true, position: true },
+    });
+
+    if (!existing) {
+      throw new Error('Task not found in this project');
+    }
+
+    const fromStatus = existing.status;
+    const fromPosition = existing.position;
+
+    // Moving within the same column: shift positions between fromPosition and toIndex
+    if (fromStatus === toStatus) {
+      if (toIndex === fromPosition) {
+        const unchanged = await tx.task.findUnique({
+          where: { id: taskId },
+          include: taskInclude,
+        });
+        if (!unchanged) {
+          throw new Error('Task not found in this project');
+        }
+        return unchanged;
+      }
+
+      const direction = toIndex > fromPosition ? -1 : 1;
+      const range: Prisma.TaskWhereInput =
+        toIndex > fromPosition
+          ? {
+              projectId,
+              status: fromStatus,
+              position: { gt: fromPosition, lte: toIndex },
+            }
+          : {
+              projectId,
+              status: fromStatus,
+              position: { gte: toIndex, lt: fromPosition },
+            };
+
+      await tx.task.updateMany({
+        where: range,
+        data: {
+          position: {
+            increment: direction,
+          },
+        },
+      });
+
+      const updated = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          position: toIndex,
+        },
+        include: taskInclude,
+      });
+
+      return updated;
+    }
+
+    // Moving to a different column: close gap in source column
+    await tx.task.updateMany({
+      where: {
+        projectId,
+        status: fromStatus,
+        position: { gt: fromPosition },
+      },
+      data: { position: { decrement: 1 } },
+    });
+
+    // Shift tasks in target column at/after toIndex down by 1
+    await tx.task.updateMany({
+      where: {
+        projectId,
+        status: toStatus,
+        position: { gte: toIndex },
+      },
+      data: { position: { increment: 1 } },
+    });
+
+    const updated = await tx.task.update({
+      where: { id: taskId },
+      data: {
+        status: toStatus,
+        position: toIndex,
+      },
+      include: taskInclude,
+    });
+
+    return updated;
   });
 };
 
