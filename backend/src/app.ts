@@ -11,8 +11,11 @@ import appRoutes from './routes';
 const app: Application = express();
 
 /** -------- BASE MIDDLEWARE -------- */
-// Restrict Cross-Origin access depending on front-end domain boundaries
-app.use(cors());
+// Restrict Cross-Origin access — allow Vite dev server origin with credentials
+app.use(cors({
+  origin: ['http://localhost:5173'],
+  credentials: true,
+}));
 // Parse incoming JSON request body payload streams
 app.use(express.json());
 // Log incoming HTTP requests

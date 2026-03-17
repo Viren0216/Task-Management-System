@@ -29,7 +29,7 @@ export const findProjectLogs = async (projectId: string, page: number, limit: nu
     prisma.activityLog.count({ where: { projectId } }),
   ]);
 
-  return { logs, total, page, limit };
+  return { logs, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 };
 
 export const findTaskLogs = async (taskId: string, projectId: string, page: number, limit: number) => {
@@ -50,5 +50,6 @@ export const findTaskLogs = async (taskId: string, projectId: string, page: numb
     prisma.activityLog.count({ where: { taskId, projectId } }),
   ]);
 
-  return { logs, total, page, limit };
+  return { logs, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 };
+

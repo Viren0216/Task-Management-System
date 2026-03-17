@@ -27,7 +27,7 @@ export const findTaskComments = async (taskId: string, page: number, limit: numb
     prisma.comment.count({ where: { taskId } }),
   ]);
 
-  return { comments, total, page, limit };
+  return { comments, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 };
 
 export const findCommentById = async (commentId: string) => {

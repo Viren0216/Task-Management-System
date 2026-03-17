@@ -42,7 +42,13 @@ export const registerUser = async (data: any) => {
   // Exclude passwordHash from returned user object
   const { passwordHash, ...userWithoutPassword } = user;
   
-  return { user: userWithoutPassword, accessToken, refreshToken };
+  return {
+    user: userWithoutPassword,
+    accessToken,
+    refreshToken,
+    accessTokenExpiresIn: 900,    // 15 minutes in seconds
+    refreshTokenExpiresIn: 604800, // 7 days in seconds
+  };
 };
 
 export const loginUser = async (data: any) => {
@@ -73,7 +79,13 @@ export const loginUser = async (data: any) => {
 
   const { passwordHash, ...userWithoutPassword } = user;
   
-  return { user: userWithoutPassword, accessToken, refreshToken };
+  return {
+    user: userWithoutPassword,
+    accessToken,
+    refreshToken,
+    accessTokenExpiresIn: 900,    // 15 minutes in seconds
+    refreshTokenExpiresIn: 604800, // 7 days in seconds
+  };
 };
 
 export const refreshAuthTokens = async (token: string) => {
@@ -111,7 +123,12 @@ export const refreshAuthTokens = async (token: string) => {
       expiresAt,
     });
 
-    return { accessToken, refreshToken: newRefreshToken };
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      accessTokenExpiresIn: 900,    // 15 minutes in seconds
+      refreshTokenExpiresIn: 604800, // 7 days in seconds
+    };
   } catch (error) {
     throw new UnauthorizedError('Invalid refresh token');
   }
