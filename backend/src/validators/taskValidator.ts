@@ -35,3 +35,12 @@ export const updateTaskStatusSchema = z.object({
     }),
   }),
 });
+
+export const moveTaskSchema = z.object({
+  body: z.object({
+    status: z.nativeEnum(TaskStatus, {
+      required_error: 'Valid status is required (TODO, IN_PROGRESS, REVIEW, DONE)',
+    }),
+    index: z.number().int().min(0),
+  }),
+});
